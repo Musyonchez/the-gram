@@ -106,19 +106,22 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             # Get user agent
             user_agent = request.META.get('HTTP_USER_AGENT', '')
             
-            BlacklistedRegistration.objects.create(
+            # Use get_or_create to avoid duplicate errors
+            BlacklistedRegistration.objects.get_or_create(
                 email=data['email'],
                 phone_number=data['phone_number'],
-                reason='underage',
-                attempted_data={
-                    'username': data['username'],
-                    'full_name': data['full_name'],
-                    'date_of_birth': str(data['date_of_birth']),
-                    'country': data['country'],
-                    'city': data['city']
-                },
-                ip_address=ip,
-                user_agent=user_agent
+                defaults={
+                    'reason': 'underage',
+                    'attempted_data': {
+                        'username': data['username'],
+                        'full_name': data['full_name'],
+                        'date_of_birth': str(data['date_of_birth']),
+                        'country': data['country'],
+                        'city': data['city']
+                    },
+                    'ip_address': ip,
+                    'user_agent': user_agent
+                }
             )
             raise serializers.ValidationError({
                 "date_of_birth": "You must be at least 13 years old to register"
@@ -204,10 +207,11 @@ class UserLoginSerializer(serializers.Serializer):
         
         return data
 
+# oauth/serializers.py - Complete fixed version
 class UserProfileSerializer(serializers.ModelSerializer):
     age = serializers.IntegerField(read_only=True)
-    profile_picture_url = serializers.URLField(read_only=True, source='profile_picture_url')
-    cover_photo_url = serializers.URLField(read_only=True, source='cover_photo_url')
+    profile_picture_url = serializers.URLField(read_only=True)
+    cover_photo_url = serializers.URLField(read_only=True)
     
     class Meta:
         model = User

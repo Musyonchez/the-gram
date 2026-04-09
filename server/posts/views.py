@@ -20,6 +20,7 @@ from oauth.models import User
 from oauth.serializers import UserProfileSerializer
 
 
+# posts/views.py - Fix PostViewSet
 class PostViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     
@@ -49,7 +50,9 @@ class PostViewSet(viewsets.ModelViewSet):
         return PostSerializer
     
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        # The user will be set inside the serializer's create method
+        # Don't pass user here to avoid duplication
+        serializer.save()
     
     @action(detail=True, methods=['post'])
     def like(self, request, pk=None):

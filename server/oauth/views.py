@@ -2,9 +2,10 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
-from django.contrib.auth import login, logout, update_session_auth_hash
-from django.db import models
+from django.contrib.auth import authenticate
 from django.core.exceptions import ObjectDoesNotExist
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView
 from .models import User, BlacklistedRegistration
 from .serializers import (
     UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer,
@@ -22,12 +23,14 @@ class RegistrationView(generics.CreateAPIView):
         if serializer.is_valid():
             user = serializer.save()
             
-            # Auto login after registration
-            login(request, user)
+            # Create JWT tokens
+            refresh = RefreshToken.for_user(user)
             
             return Response({
                 "success": True,
                 "message": "Registration successful",
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh),
                 "user": UserProfileSerializer(user, context={'request': request}).data
             }, status=status.HTTP_201_CREATED)
         
@@ -44,11 +47,15 @@ class LoginView(APIView):
         
         if serializer.is_valid():
             user = serializer.validated_data['user']
-            login(request, user)
+            
+            # Create JWT tokens
+            refresh = RefreshToken.for_user(user)
             
             return Response({
                 "success": True,
                 "message": "Login successful",
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh),
                 "user": UserProfileSerializer(user, context={'request': request}).data
             })
         
@@ -61,11 +68,21 @@ class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request):
-        logout(request)
-        return Response({
-            "success": True,
-            "message": "Logout successful"
-        })
+        try:
+            # Get the refresh token from request data
+            refresh_token = request.data.get("refresh_token")
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()  # Blacklist the refresh token
+            return Response({
+                "success": True,
+                "message": "Logout successful"
+            })
+        except Exception as e:
+            return Response({
+                "success": False,
+                "message": "Invalid token"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = UserProfileSerializer
@@ -132,9 +149,6 @@ class PasswordChangeView(APIView):
             user = request.user
             user.set_password(serializer.validated_data['new_password'])
             user.save()
-            
-            # Keep the user logged in after password change
-            update_session_auth_hash(request, user)
             
             return Response({
                 "success": True,

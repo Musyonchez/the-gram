@@ -7,9 +7,14 @@ from datetime import date, timedelta
 from .models import Post, Like, Comment, Follow, Save, Collection
 import tempfile
 from PIL import Image
+import os
+import tempfile
+from PIL import Image
+import io
 
 User = get_user_model()
 
+# posts/tests.py - Fix PostModelTests
 class PostModelTests(TestCase):
     """Test the Post model"""
     
@@ -26,14 +31,17 @@ class PostModelTests(TestCase):
         )
     
     def test_create_post(self):
+        # This should test model creation, not API endpoint
         post = Post.objects.create(
             user=self.user,
             caption='Test post',
             post_type='image'
         )
         
+        self.assertIsNotNone(post.id)
         self.assertEqual(post.user, self.user)
         self.assertEqual(post.caption, 'Test post')
+        self.assertEqual(post.post_type, 'image')
         self.assertEqual(post.likes_count, 0)
         self.assertEqual(post.comments_count, 0)
     
@@ -50,6 +58,7 @@ class PostModelTests(TestCase):
         self.assertEqual(post.likes_count, 4)
 
 
+# posts/tests.py - Fix PostAPITests setup
 class PostAPITests(APITestCase):
     """Test Post API endpoints"""
     
@@ -79,12 +88,20 @@ class PostAPITests(APITestCase):
             city='Kumasi'
         )
         
-        # Authenticate as user1
+        # Force authenticate properly
         self.client.force_authenticate(user=self.user1)
         
-        # Create a test image
-        self.image = tempfile.NamedTemporaryFile(suffix='.jpg').name
-        Image.new('RGB', (100, 100)).save(self.image)
+        # Create a test image properly
+        self.image = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(self.image.name, 'JPEG')
+        self.image.close()
+    
+    def tearDown(self):
+        # Clean up test image
+        import os
+        if os.path.exists(self.image.name):
+            os.unlink(self.image.name)
     
     def test_create_post(self):
         url = reverse('post-list')
@@ -94,7 +111,7 @@ class PostAPITests(APITestCase):
             'visibility': 'public'
         }
         
-        with open(self.image, 'rb') as img:
+        with open(self.image.name, 'rb') as img:
             data['media_file'] = img
             response = self.client.post(url, data, format='multipart')
         
@@ -136,18 +153,28 @@ class PostAPITests(APITestCase):
         post.refresh_from_db()
         self.assertEqual(post.comments_count, 1)
     
+    # posts/tests.py - 
     def test_feed(self):
-        # Create posts from user2 (not followed yet)
-        post1 = Post.objects.create(user=self.user2, caption='Post 1')
-        post2 = Post.objects.create(user=self.user2, caption='Post 2')
+        # Clear any existing posts
+        Post.objects.all().delete()
         
-        # Create a public post from another user
+        # Create posts from user2
+        post1 = Post.objects.create(user=self.user2, caption='Post 1', visibility='public')
+        post2 = Post.objects.create(user=self.user2, caption='Post 2', visibility='public')
+        
+        # Create a post from user1 (self)
+        post3 = Post.objects.create(user=self.user1, caption='Post 3', visibility='public')
+        
+        # Get the feed
         url = reverse('feed')
         response = self.client.get(url)
         
-        # Should only see public posts since not following anyone
+        # Should see:
+        # - User1's own post (1)
+        # - User2's public posts (2)
+        # Total: 3
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data), 3)
     
     def test_follow_user(self):
         url = reverse('follow', kwargs={'username': self.user2.username})

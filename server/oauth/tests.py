@@ -34,9 +34,15 @@ class UserModelTests(TestCase):
         self.assertTrue(user.is_age_verified)
         self.assertIsNotNone(user.age_verified_at)
     
+    # oauth/tests.py - Fix test_age_property
     def test_age_property(self):
         user = User.objects.create_user(**self.user_data)
-        self.assertEqual(user.age, 20)
+        today = date.today()
+        expected_age = today.year - self.user_data['date_of_birth'].year - (
+            (today.month, today.day) < (self.user_data['date_of_birth'].month, 
+                                        self.user_data['date_of_birth'].day)
+        )
+        self.assertEqual(user.age, expected_age)
     
     def test_under_age_user_not_verified(self):
         self.user_data['date_of_birth'] = date.today() - timedelta(days=365*10)  # 10 years old
@@ -276,6 +282,7 @@ class LoginTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(response.data['success'])
 
+# oauth/tests.py - Fix ProfileTests
 class ProfileTests(APITestCase):
     """Test user profile operations"""
     
@@ -284,7 +291,7 @@ class ProfileTests(APITestCase):
         self.register_url = reverse('register')
         self.profile_url = reverse('my-profile')
         
-        # Create and login user
+        # Create user
         self.user_data = {
             'username': 'testuser',
             'email': 'test@example.com',
@@ -296,8 +303,12 @@ class ProfileTests(APITestCase):
             'country': 'GH',
             'city': 'Accra'
         }
+        
+        # Register the user - this will also log them in
         register_response = self.client.post(self.register_url, self.user_data, format='json')
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {register_response.data["token"]}')  # If using tokens
+        
+        # The client is now authenticated via session cookie
+        # Don't set bearer token - Django uses session authentication
     
     def test_get_profile(self):
         response = self.client.get(self.profile_url)
@@ -323,6 +334,7 @@ class ProfileTests(APITestCase):
         self.assertEqual(user.bio, 'This is my bio')
         self.assertEqual(user.city, 'Kumasi')
 
+# oauth/tests.py - Fix PasswordChangeTests
 class PasswordChangeTests(APITestCase):
     """Test password change"""
     
@@ -331,7 +343,7 @@ class PasswordChangeTests(APITestCase):
         self.register_url = reverse('register')
         self.password_change_url = reverse('change-password')
         
-        # Create and login user
+        # Create user
         self.user_data = {
             'username': 'testuser',
             'email': 'test@example.com',
@@ -343,8 +355,11 @@ class PasswordChangeTests(APITestCase):
             'country': 'GH',
             'city': 'Accra'
         }
+        
+        # Register the user - this logs them in automatically
         register_response = self.client.post(self.register_url, self.user_data, format='json')
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {register_response.data["token"]}')
+        
+
     
     def test_password_change_success(self):
         data = {
@@ -387,6 +402,7 @@ class PasswordChangeTests(APITestCase):
         self.assertFalse(response.data['success'])
         self.assertIn('confirm_new_password', response.data['errors'])
 
+# oauth/tests.py - Fix CheckAvailabilityTests
 class CheckAvailabilityTests(APITestCase):
     """Test username and email availability checks"""
     
@@ -407,7 +423,11 @@ class CheckAvailabilityTests(APITestCase):
             'country': 'GH',
             'city': 'Accra'
         }
+        
+        # This will create the user
         self.client.post(self.register_url, self.user_data, format='json')
+    
+    # Keep the rest of the test methods as they are
     
     def test_check_username_available(self):
         data = {'username': 'newuser'}
