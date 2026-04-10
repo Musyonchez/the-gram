@@ -1,7 +1,7 @@
 // AuthPage.jsx - Updated with image upload support
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { register, login, checkUsername, checkEmail, validateRegistration } from '../services/auth';
-import { FiCamera, FiUser, FiX, FiUpload } from 'react-icons/fi';
+import { FiX, FiUpload } from 'react-icons/fi';
 
 // --- Reusable Sub-Components ---
 
@@ -184,8 +184,8 @@ const LoginForm = ({ onSuccess }) => {
     
     if (!formData.identifier || !formData.password) {
       setErrors({
-        identifier: !formData.identifier ? 'Email/Username/Phone is required' : '',
-        password: !formData.password ? 'Password is required' : '',
+        identifier: formData.identifier ? '' : 'Email/Username/Phone is required',
+        password: formData.password ? '' : 'Password is required',
       });
       return;
     }
@@ -557,7 +557,7 @@ const AuthPage = () => {
   const [showLogin, setShowLogin] = useState(true);
   const [authSuccess, setAuthSuccess] = useState(false);
 
-  const handleAuthSuccess = (user) => {
+  const handleAuthSuccess = () => {
     setAuthSuccess(true);
     setTimeout(() => {
       window.location.href = '/dashboard';
@@ -606,7 +606,7 @@ const AuthPage = () => {
           </button>
           <button 
             onClick={() => setShowLogin(false)}
-            className={`flex-1 text-sm font-semibold py-3 px-6 rounded-full transition-colors duration-200 ${!showLogin ? 'bg-zinc-100 text-black' : 'text-zinc-400 hover:text-zinc-200'}`}
+            className={`flex-1 text-sm font-semibold py-3 px-6 rounded-full transition-colors duration-200 ${showLogin ? 'text-zinc-400 hover:text-zinc-200' : 'bg-zinc-100 text-black'}`}
           >
             Sign up
           </button>

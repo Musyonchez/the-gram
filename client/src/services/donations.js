@@ -214,7 +214,10 @@ export const useTransactionStatus = (checkoutRequestId, onStatusChange) => {
     const [status, setStatus] = useState(null);
     const intervalRef = useRef(null);
     const callbackRef = useRef(onStatusChange);
-    callbackRef.current = onStatusChange;
+
+    useEffect(() => {
+        callbackRef.current = onStatusChange;
+    });
 
     useEffect(() => {
         if (!checkoutRequestId) return;

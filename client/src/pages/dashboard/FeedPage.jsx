@@ -27,6 +27,7 @@ const FeedPage = () => {
   useEffect(() => {
     loadFeed();
     loadSuggestions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   const loadFeed = async () => {

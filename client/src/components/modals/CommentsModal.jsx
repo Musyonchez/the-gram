@@ -1,5 +1,5 @@
 // components/modals/CommentsModal.jsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { FiHeart, FiSend, FiX, FiMessageCircle, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { getComments, addComment, toggleCommentLike, deleteComment, getCommentReplies } from '../../services/posts';
@@ -23,6 +23,7 @@ const CommentsModal = ({ postId, post, onClose, onCommentCountUpdate }) => {
     const user = getUser();
     setCurrentUser(user);
     loadComments();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
 
   const loadComments = async (pageNum = 1, append = false) => {

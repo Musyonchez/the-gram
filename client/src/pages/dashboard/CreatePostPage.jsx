@@ -146,7 +146,7 @@ const CreatePostPage = () => {
         formData.append('media_file', postData.media_file);
       }
       
-      const result = await createPost(formData);
+      await createPost(formData);
       
       toast.success('Post created successfully! 🎉');
       
@@ -192,13 +192,7 @@ const CreatePostPage = () => {
     }
   };
 
-  const getVisibilityIcon = () => {
-    switch (postData.visibility) {
-      case 'followers': return <FiUsers className="text-lg" />;
-      case 'private': return <FiLock className="text-lg" />;
-      default: return <FiEye className="text-lg" />;
-    }
-  };
+
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">

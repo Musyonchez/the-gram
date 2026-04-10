@@ -1,4 +1,5 @@
 // services/auth.js
+import { useState } from 'react';
 const API_BASE_URL = 'http://localhost:8000/api/auth';
 
 // Helper function to handle API responses
@@ -55,7 +56,7 @@ const isTokenExpired = (token) => {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const expirationTime = payload.exp * 1000;
     return Date.now() >= expirationTime;
-  } catch (error) {
+  } catch {
     return true;
   }
 };
@@ -474,9 +475,9 @@ export const setupAxiosInterceptors = (axios) => {
 
 // React Hook for auth state
 export const useAuth = () => {
-  const [user, setUser] = React.useState(getUser());
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState(null);
+  const [user, setUser] = useState(getUser());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   const loginUser = async (credentials) => {
     setLoading(true);

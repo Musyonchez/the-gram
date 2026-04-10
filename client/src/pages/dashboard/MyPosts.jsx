@@ -8,11 +8,8 @@ import { getUser } from '../../services/auth';
 const MyPostsPage = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
-
   useEffect(() => {
     const user = getUser();
-    setCurrentUser(user);
     if (user) {
       fetchMyPosts(user.username);
     }

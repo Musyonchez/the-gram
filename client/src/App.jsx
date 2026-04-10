@@ -10,7 +10,7 @@ import MyPostsPage from './pages/dashboard/MyPosts';
 import DonationsPage from './pages/dashboard/DonationsPage';
 import ProfilePage from './pages/dashboard/ProfilePage';
 import AuthPage from './pages/AuthPage';
-import { isAuthenticated, getAccessToken, refreshAccessToken } from './services/auth';
+import { getAccessToken, refreshAccessToken } from './services/auth';
 
 // Protected Route Component - for routes that require authentication
 const ProtectedRoute = ({ children }) => {
@@ -50,7 +50,7 @@ const ProtectedRoute = ({ children }) => {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const expirationTime = payload.exp * 1000;
       return Date.now() >= expirationTime;
-    } catch (error) {
+    } catch {
       return true;
     }
   };
@@ -71,14 +71,8 @@ const ProtectedRoute = ({ children }) => {
 
 // Public Route Component
 const PublicRoute = ({ children }) => {
-  const [isAuth, setIsAuth] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const token = getAccessToken();
-    setIsAuth(!!token);
-    setIsLoading(false);
-  }, []);
+  const [isAuth] = useState(() => !!getAccessToken());
+  const isLoading = false;
 
   if (isLoading) {
     return (

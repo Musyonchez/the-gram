@@ -104,7 +104,7 @@ const ProfilePage = () => {
         
         // Fetch saved posts only for own profile
         if (!username || (currentUserData && currentUserData.username === profileUsername)) {
-          await fetchSavedPosts(token);
+          await fetchSavedPosts();
         }
         
       } catch (error) {
@@ -140,7 +140,7 @@ const ProfilePage = () => {
     }
   };
 
-  const fetchSavedPosts = async (token) => {
+  const fetchSavedPosts = async () => {
     try {
       const savedData = await getSavedPosts();
       const formattedSavedPosts = (savedData.results || []).map(formatPostData);
