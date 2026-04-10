@@ -1,3 +1,4 @@
+# posts/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
@@ -16,11 +17,6 @@ urlpatterns = [
     
     # Nested comments routes
     path('posts/<int:post_pk>/', include(post_router.urls)),
-    
-    # Follow routes
-    path('follow/<str:username>/', views.FollowView.as_view(), name='follow'),
-    path('followers/<str:username>/', views.FollowersListView.as_view(), name='followers'),
-    path('following/<str:username>/', views.FollowingListView.as_view(), name='following'),
     
     # Feed routes
     path('feed/', views.FeedView.as_view(), name='feed'),

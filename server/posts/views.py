@@ -1,3 +1,4 @@
+# posts/views.py
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -7,25 +8,25 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import timedelta
 from .models import (
-    Post, Like, Comment, CommentLike, Follow, 
+    Post, CarouselImage, Like, Comment, CommentLike,
     Save, Collection, Report
 )
 from .serializers import (
     PostSerializer, PostCreateSerializer, LikeSerializer,
-    CommentSerializer, CommentCreateSerializer, FollowSerializer,
+    CommentSerializer, CommentCreateSerializer,
     CollectionSerializer, SaveSerializer, SaveCreateSerializer,
     ReportSerializer
 )
-from oauth.models import User
+from oauth.models import User, Follow
 from oauth.serializers import UserProfileSerializer
 
 
-# posts/views.py - Fix PostViewSet
 class PostViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         user = self.request.user
+        username = self.request.query_params.get('user', None)
         
         # Base queryset with optimizations
         queryset = Post.objects.select_related('user').prefetch_related(
@@ -34,10 +35,12 @@ class PostViewSet(viewsets.ModelViewSet):
             Prefetch('saves', queryset=Save.objects.filter(user=user), to_attr='user_save')
         )
         
-        # Get users that the current user follows
-        following_users = user.following.values_list('following', flat=True)
+        # If username is provided (for user's own posts), filter by that user
+        if username:
+            return queryset.filter(user__username=username).order_by('-created_at')
         
-        # Show posts from followed users and public posts
+        # Otherwise, return feed (posts from followed users and public posts)
+        following_users = user.following.values_list('following', flat=True)
         return queryset.filter(
             Q(user__in=following_users) |
             Q(user=user) |
@@ -50,8 +53,7 @@ class PostViewSet(viewsets.ModelViewSet):
         return PostSerializer
     
     def perform_create(self, serializer):
-        # The user will be set inside the serializer's create method
-        # Don't pass user here to avoid duplication
+        # DON'T pass user here - it will be handled in the serializer's create method
         serializer.save()
     
     @action(detail=True, methods=['post'])
@@ -253,90 +255,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class FollowView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def post(self, request, username):
-        """Follow or unfollow a user"""
-        try:
-            user_to_follow = User.objects.get(username=username)
-        except User.DoesNotExist:
-            return Response(
-                {'error': 'User not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
-        if user_to_follow == request.user:
-            return Response(
-                {'error': 'You cannot follow yourself'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        follow, created = Follow.objects.get_or_create(
-            follower=request.user,
-            following=user_to_follow
-        )
-        
-        if created:
-            return Response({
-                'status': 'following',
-                'message': f'You are now following {username}'
-            }, status=status.HTTP_201_CREATED)
-        else:
-            follow.delete()
-            return Response({
-                'status': 'unfollowed',
-                'message': f'You have unfollowed {username}'
-            }, status=status.HTTP_200_OK)
-    
-    def get(self, request, username):
-        """Check if following a user"""
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            return Response(
-                {'error': 'User not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
-        is_following = Follow.objects.filter(
-            follower=request.user,
-            following=user
-        ).exists()
-        
-        return Response({
-            'is_following': is_following
-        })
-
-
-class FollowersListView(generics.ListAPIView):
-    """Get list of followers for a user"""
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UserProfileSerializer
-    
-    def get_queryset(self):
-        username = self.kwargs.get('username')
-        user = get_object_or_404(User, username=username)
-        
-        return User.objects.filter(
-            following__following=user
-        ).select_related('user').order_by('-following__created_at')
-
-
-class FollowingListView(generics.ListAPIView):
-    """Get list of users that a user is following"""
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UserProfileSerializer
-    
-    def get_queryset(self):
-        username = self.kwargs.get('username')
-        user = get_object_or_404(User, username=username)
-        
-        return User.objects.filter(
-            followers__follower=user
-        ).select_related('user').order_by('-followers__created_at')
-
-
 class FeedView(generics.ListAPIView):
     """Get personalized feed for the user"""
     permission_classes = [permissions.IsAuthenticated]
@@ -443,3 +361,20 @@ class SavedPostsView(generics.ListAPIView):
         saves = user.save_set.select_related('post__user').all()
         
         return [save.post for save in saves]
+
+
+# Add a dedicated view for user posts
+class UserPostsView(generics.ListAPIView):
+    """Get posts for a specific user"""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PostSerializer
+    
+    def get_queryset(self):
+        username = self.kwargs.get('username')
+        return Post.objects.filter(
+            user__username=username
+        ).select_related('user').prefetch_related(
+            'carousel_images',
+            'likes',
+            'saves'
+        ).order_by('-created_at')

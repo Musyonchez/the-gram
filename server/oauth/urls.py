@@ -1,3 +1,4 @@
+# oauth/urls.py
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
@@ -13,6 +14,14 @@ urlpatterns = [
     # Profile
     path('profile/', views.UserProfileView.as_view(), name='my-profile'),
     path('profile/<str:username>/', views.UserDetailView.as_view(), name='user-profile'),
+    
+    # Follow functionality
+    path('follow/', views.FollowUserView.as_view(), name='follow-user'),
+    path('unfollow/', views.UnfollowUserView.as_view(), name='unfollow-user'),
+    path('followers/<str:username>/', views.FollowersListView.as_view(), name='user-followers'),
+    path('following/<str:username>/', views.FollowingListView.as_view(), name='user-following'),
+    path('check-follow/<str:username>/', views.CheckFollowStatusView.as_view(), name='check-follow'),
+    path('suggestions/', views.SuggestionsView.as_view(), name='follow-suggestions'),
     
     # Validation endpoints
     path('check-username/', views.check_username, name='check-username'),

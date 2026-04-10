@@ -4,7 +4,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.db import models
 from datetime import date
 import re
-from .models import User, BlacklistedRegistration
+from .models import User, BlacklistedRegistration, Follow
 
 class CountryField(serializers.ChoiceField):
     def __init__(self, **kwargs):
@@ -265,3 +265,67 @@ class PasswordChangeSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError("Old password is incorrect")
         return value
+    
+
+# oauth/serializers.py - Add these new serializers at the end of the file
+
+class FollowSerializer(serializers.ModelSerializer):
+    follower_username = serializers.CharField(source='follower.username', read_only=True)
+    follower_full_name = serializers.CharField(source='follower.full_name', read_only=True)
+    follower_profile_picture = serializers.ImageField(source='follower.profile_picture', read_only=True)
+    follower_profile_picture_url = serializers.URLField(source='follower.profile_picture_url', read_only=True)
+    
+    following_username = serializers.CharField(source='following.username', read_only=True)
+    following_full_name = serializers.CharField(source='following.full_name', read_only=True)
+    following_profile_picture = serializers.ImageField(source='following.profile_picture', read_only=True)
+    following_profile_picture_url = serializers.URLField(source='following.profile_picture_url', read_only=True)
+    
+    class Meta:
+        model = Follow
+        fields = [
+            'id', 'follower', 'follower_username', 'follower_full_name', 
+            'follower_profile_picture', 'follower_profile_picture_url',
+            'following', 'following_username', 'following_full_name',
+            'following_profile_picture', 'following_profile_picture_url',
+            'created_at'
+        ]
+        read_only_fields = ['created_at']
+
+class FollowActionSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(required=True)
+    
+    def validate_user_id(self, value):
+        try:
+            user_to_follow = User.objects.get(id=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User not found")
+        
+        current_user = self.context['request'].user
+        
+        if current_user.id == value:
+            raise serializers.ValidationError("You cannot follow yourself")
+        
+        return value
+
+class UserProfileWithFollowSerializer(UserProfileSerializer):
+    followers_count = serializers.IntegerField(read_only=True)
+    following_count = serializers.IntegerField(read_only=True)
+    is_following = serializers.SerializerMethodField()
+    is_followed_by = serializers.SerializerMethodField()
+    
+    class Meta(UserProfileSerializer.Meta):
+        fields = UserProfileSerializer.Meta.fields + [
+            'followers_count', 'following_count', 'is_following', 'is_followed_by'
+        ]
+    
+    def get_is_following(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Follow.objects.filter(follower=request.user, following=obj).exists()
+        return False
+    
+    def get_is_followed_by(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Follow.objects.filter(follower=obj, following=request.user).exists()
+        return False

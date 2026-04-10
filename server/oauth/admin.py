@@ -1,48 +1,37 @@
+# oauth/admin.py
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, BlacklistedRegistration
+from .models import User, BlacklistedRegistration, Follow
 
+@admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'full_name', 'country', 'city', 'is_age_verified', 'date_joined')
-    list_filter = ('country', 'is_age_verified', 'is_active')
-    search_fields = ('username', 'email', 'full_name', 'phone_number')
-    ordering = ('-date_joined',)
+    list_display = ['username', 'email', 'full_name', 'country', 'city', 'is_active', 'date_joined']
+    list_filter = ['is_active', 'is_staff', 'country', 'date_joined']
+    search_fields = ['username', 'email', 'full_name', 'phone_number']
+    readonly_fields = ['date_joined', 'last_login', 'age']
     
-    fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        ('Personal info', {
-            'fields': ('full_name', 'email', 'phone_number', 'date_of_birth', 'bio')
-        }),
-        ('Location', {
-            'fields': ('country', 'city')
-        }),
-        ('Profile Images', {
-            'fields': ('profile_picture', 'cover_photo')
-        }),
-        ('Permissions', {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
-        }),
-        ('Verification', {
-            'fields': ('is_age_verified', 'age_verified_at', 'is_verified')
-        }),
-        ('Important dates', {
-            'fields': ('last_login', 'date_joined')
-        }),
+    fieldsets = UserAdmin.fieldsets + (
+        ('Personal Info', {'fields': ('full_name', 'date_of_birth', 'bio', 'phone_number', 'country', 'city')}),
+        ('Profile Images', {'fields': ('profile_picture', 'cover_photo')}),
+        ('Verification', {'fields': ('is_age_verified', 'age_verified_at', 'is_verified')}),
     )
     
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('username', 'email', 'password1', 'password2', 'full_name', 'date_of_birth', 'phone_number', 'country', 'city'),
-        }),
-    )
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # editing an existing object
+            return self.readonly_fields + ('username', 'email')
+        return self.readonly_fields
 
 @admin.register(BlacklistedRegistration)
 class BlacklistedRegistrationAdmin(admin.ModelAdmin):
-    list_display = ('email', 'phone_number', 'reason', 'ip_address', 'created_at')
-    list_filter = ('reason', 'created_at')
-    search_fields = ('email', 'phone_number', 'ip_address')
-    readonly_fields = ('created_at',)
-    ordering = ('-created_at',)
+    list_display = ['email', 'phone_number', 'reason', 'created_at']
+    list_filter = ['reason', 'created_at']
+    search_fields = ['email', 'phone_number', 'attempted_data']
+    readonly_fields = ['created_at']
 
-admin.site.register(User, CustomUserAdmin)
+@admin.register(Follow)
+class FollowAdmin(admin.ModelAdmin):
+    list_display = ['id', 'follower', 'following', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['follower__username', 'following__username']
+    raw_id_fields = ['follower', 'following']
+    readonly_fields = ['created_at']

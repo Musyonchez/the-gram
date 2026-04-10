@@ -1,3 +1,4 @@
+# oauth/models.py
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
@@ -112,6 +113,14 @@ class User(AbstractUser):
             return self.cover_photo.url
         return '/static/default_cover.jpg'
     
+    @property
+    def followers_count(self):
+        return self.followers.count()
+    
+    @property
+    def following_count(self):
+        return self.following.count()
+    
     def save(self, *args, **kwargs):
         # Auto-verify age if user is 13 or older
         if self.age >= 13:
@@ -134,3 +143,28 @@ class User(AbstractUser):
     
     def __str__(self):
         return f"{self.username} - {self.full_name}"
+
+class Follow(models.Model):
+    """Model to handle user following relationships"""
+    follower = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='following'  # Users this person follows
+    )
+    following = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='followers'  # Users following this person
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['follower', 'following']  # Prevent duplicate follows
+        indexes = [
+            models.Index(fields=['follower', 'following']),
+            models.Index(fields=['created_at']),
+        ]
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.follower.username} follows {self.following.username}"

@@ -1,3 +1,4 @@
+# oauth/views.py
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -6,10 +7,11 @@ from django.contrib.auth import authenticate
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
-from .models import User, BlacklistedRegistration
+from .models import User, BlacklistedRegistration, Follow
 from .serializers import (
     UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer,
-    UserUpdateSerializer, PasswordChangeSerializer
+    UserUpdateSerializer, PasswordChangeSerializer, FollowSerializer, 
+    FollowActionSerializer, UserProfileWithFollowSerializer
 )
 
 class RegistrationView(generics.CreateAPIView):
@@ -118,14 +120,14 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.filter(is_active=True)
-    serializer_class = UserProfileSerializer
+    serializer_class = UserProfileWithFollowSerializer  # Updated to include follow info
     permission_classes = [permissions.AllowAny]
     lookup_field = 'username'
     
     def get(self, request, *args, **kwargs):
         try:
             user = self.get_object()
-            serializer = self.get_serializer(user)
+            serializer = self.get_serializer(user, context={'request': request})
             return Response({
                 "success": True,
                 "user": serializer.data
@@ -203,3 +205,200 @@ def check_email(request):
         "available": not exists and not blacklisted,
         "message": "Email is available" if not exists else "Email is already registered"
     })
+
+# ==================== FOLLOW FUNCTIONALITY VIEWS ====================
+
+class FollowUserView(APIView):
+    """Follow a user"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        serializer = FollowActionSerializer(data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            user_to_follow_id = serializer.validated_data['user_id']
+            user_to_follow = User.objects.get(id=user_to_follow_id)
+            
+            # Check if already following
+            if Follow.objects.filter(follower=request.user, following=user_to_follow).exists():
+                return Response({
+                    "success": False,
+                    "message": "You are already following this user"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create follow relationship
+            follow = Follow.objects.create(
+                follower=request.user,
+                following=user_to_follow
+            )
+            
+            return Response({
+                "success": True,
+                "message": f"You are now following {user_to_follow.username}",
+                "follow": FollowSerializer(follow).data
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response({
+            "success": False,
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+class UnfollowUserView(APIView):
+    """Unfollow a user"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        serializer = FollowActionSerializer(data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            user_to_unfollow_id = serializer.validated_data['user_id']
+            user_to_unfollow = User.objects.get(id=user_to_unfollow_id)
+            
+            # Check if following exists
+            try:
+                follow = Follow.objects.get(follower=request.user, following=user_to_unfollow)
+                follow.delete()
+                
+                return Response({
+                    "success": True,
+                    "message": f"You have unfollowed {user_to_unfollow.username}"
+                }, status=status.HTTP_200_OK)
+            except Follow.DoesNotExist:
+                return Response({
+                    "success": False,
+                    "message": "You are not following this user"
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({
+            "success": False,
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+class FollowersListView(APIView):
+    """Get list of users following a specific user"""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request, username):
+        try:
+            user = User.objects.get(username=username.lower())
+            followers = user.followers.all().select_related('follower')
+            
+            # Serialize with pagination
+            page = request.GET.get('page', 1)
+            page_size = request.GET.get('page_size', 20)
+            
+            start = (int(page) - 1) * int(page_size)
+            end = start + int(page_size)
+            
+            followers_list = [
+                {
+                    'id': follow.follower.id,
+                    'username': follow.follower.username,
+                    'full_name': follow.follower.full_name,
+                    'profile_picture_url': follow.follower.profile_picture_url,
+                    'bio': follow.follower.bio,
+                    'followed_at': follow.created_at
+                }
+                for follow in followers[start:end]
+            ]
+            
+            return Response({
+                "success": True,
+                "count": followers.count(),
+                "followers": followers_list
+            })
+        except User.DoesNotExist:
+            return Response({
+                "success": False,
+                "message": "User not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+class FollowingListView(APIView):
+    """Get list of users a specific user is following"""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request, username):
+        try:
+            user = User.objects.get(username=username.lower())
+            following = user.following.all().select_related('following')
+            
+            # Serialize with pagination
+            page = request.GET.get('page', 1)
+            page_size = request.GET.get('page_size', 20)
+            
+            start = (int(page) - 1) * int(page_size)
+            end = start + int(page_size)
+            
+            following_list = [
+                {
+                    'id': follow.following.id,
+                    'username': follow.following.username,
+                    'full_name': follow.following.full_name,
+                    'profile_picture_url': follow.following.profile_picture_url,
+                    'bio': follow.following.bio,
+                    'followed_at': follow.created_at
+                }
+                for follow in following[start:end]
+            ]
+            
+            return Response({
+                "success": True,
+                "count": following.count(),
+                "following": following_list
+            })
+        except User.DoesNotExist:
+            return Response({
+                "success": False,
+                "message": "User not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+class CheckFollowStatusView(APIView):
+    """Check if current user follows another user"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request, username):
+        try:
+            user_to_check = User.objects.get(username=username.lower())
+            is_following = Follow.objects.filter(
+                follower=request.user, 
+                following=user_to_check
+            ).exists()
+            is_followed_by = Follow.objects.filter(
+                follower=user_to_check, 
+                following=request.user
+            ).exists()
+            
+            return Response({
+                "success": True,
+                "is_following": is_following,
+                "is_followed_by": is_followed_by
+            })
+        except User.DoesNotExist:
+            return Response({
+                "success": False,
+                "message": "User not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+class SuggestionsView(APIView):
+    """Get suggested users to follow"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        # Get users that the current user is not following
+        following_ids = request.user.following.values_list('following_id', flat=True)
+        
+        suggested_users = User.objects.filter(
+            is_active=True,
+            is_age_verified=True
+        ).exclude(
+            id=request.user.id
+        ).exclude(
+            id__in=following_ids
+        ).order_by('-date_joined')[:20]
+        
+        serializer = UserProfileSerializer(suggested_users, many=True, context={'request': request})
+        
+        return Response({
+            "success": True,
+            "suggestions": serializer.data
+        })

@@ -1,11 +1,13 @@
+# posts/serializers.py
 from rest_framework import serializers
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 from .models import (
     Post, CarouselImage, Like, Comment, CommentLike,
-    Follow, Save, Collection, Report
+    Save, Collection, Report
 )
+from oauth.models import Follow
 from oauth.serializers import UserProfileSerializer
 
 
@@ -25,8 +27,8 @@ class PostSerializer(serializers.ModelSerializer):
     is_saved = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
     carousel_images = CarouselImageSerializer(many=True, read_only=True)
-    media_url = serializers.URLField(read_only=True)
-    thumbnail_url = serializers.URLField(read_only=True)
+    media_url = serializers.SerializerMethodField()
+    thumbnail_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Post
@@ -48,6 +50,16 @@ class PostSerializer(serializers.ModelSerializer):
             'media_file': {'write_only': True},
             'thumbnail': {'write_only': True},
         }
+    
+    def get_media_url(self, obj):
+        if obj.media_file and hasattr(obj.media_file, 'url'):
+            return obj.media_file.url
+        return None
+    
+    def get_thumbnail_url(self, obj):
+        if obj.thumbnail and hasattr(obj.thumbnail, 'url'):
+            return obj.thumbnail.url
+        return None
     
     def get_is_liked(self, obj):
         request = self.context.get('request')
@@ -73,13 +85,9 @@ class PostSerializer(serializers.ModelSerializer):
         return False
     
     def validate_media_file(self, value):
-        if value.size > 100 * 1024 * 1024:  # 100MB limit
+        if value.size > 100 * 1024 * 1024:
             raise serializers.ValidationError("File size cannot exceed 100MB")
         return value
-    
-    def create(self, validated_data):
-        # Handle carousel images separately if needed
-        return super().create(validated_data)
 
 
 class PostCreateSerializer(serializers.ModelSerializer):
@@ -130,7 +138,6 @@ class PostCreateSerializer(serializers.ModelSerializer):
         
         post = Post.objects.create(user=user, **validated_data)
         
-        # Create carousel images
         for order, image in enumerate(carousel_images):
             CarouselImage.objects.create(
                 post=post,
@@ -206,15 +213,6 @@ class CommentCreateSerializer(serializers.ModelSerializer):
         validated_data['user'] = self.context['request'].user
         validated_data['post_id'] = self.context['post_id']
         return super().create(validated_data)
-
-
-class FollowSerializer(serializers.ModelSerializer):
-    follower = UserProfileSerializer(read_only=True)
-    following = UserProfileSerializer(read_only=True)
-    
-    class Meta:
-        model = Follow
-        fields = ['id', 'follower', 'following', 'created_at']
 
 
 class CollectionSerializer(serializers.ModelSerializer):

@@ -260,29 +260,7 @@ class CommentLike(models.Model):
         super().delete(*args, **kwargs)
 
 
-class Follow(models.Model):
-    follower = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
-        related_name='following'
-    )
-    following = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
-        related_name='followers'
-    )
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    
-    class Meta:
-        unique_together = ('follower', 'following')
-        indexes = [
-            models.Index(fields=['follower', '-created_at']),
-            models.Index(fields=['following', '-created_at']),
-        ]
-        ordering = ['-created_at']
-    
-    def __str__(self):
-        return f"{self.follower.username} follows {self.following.username}"
+# FOLLOW MODEL REMOVED - Now only in oauth app
 
 
 class Save(models.Model):
