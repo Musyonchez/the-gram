@@ -1,5 +1,5 @@
 // pages/dashboard/FeedPage.jsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { FiHeart, FiMessageCircle, FiDollarSign, FiBookmark, FiShare2, FiUserPlus, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { getFeed, toggleLike, savePost, formatPostData } from '../../services/posts';
@@ -173,7 +173,7 @@ const FeedPage = () => {
     <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
       {/* Suggestions Card */}
       {suggestions.length > 0 && !suggestionsLoading && (
-        <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0d0d0d] rounded-2xl border border-zinc-800 p-5 shadow-xl">
+        <div className="bg-linear-to-r from-[#1a1a1a] to-[#0d0d0d] rounded-2xl border border-zinc-800 p-5 shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-[#ff7b57]/20 flex items-center justify-center">
@@ -205,7 +205,7 @@ const FeedPage = () => {
                     <p className="text-white font-medium text-sm">{user.full_name || user.username}</p>
                     <p className="text-zinc-500 text-xs">@{user.username}</p>
                     {user.bio && (
-                      <p className="text-zinc-600 text-xs mt-0.5 line-clamp-1 max-w-[150px]">{user.bio}</p>
+                      <p className="text-zinc-600 text-xs mt-0.5 line-clamp-1 max-w-37.5">{user.bio}</p>
                     )}
                   </div>
                 </div>
