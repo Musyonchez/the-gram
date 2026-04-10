@@ -1,5 +1,6 @@
 // services/donations.js
-// API service for handling M-Pesa donations (Pure API service - no React hooks)
+// API service for handling M-Pesa donations
+import { useState, useEffect, useRef } from 'react';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
@@ -205,6 +206,39 @@ export const validatePhoneNumber = (phone) => {
         return { valid: false, message: 'Phone number must start with 254' };
     }
     return { valid: true, message: null, formatted };
+};
+
+// ============ REACT HOOKS ============
+
+export const useTransactionStatus = (checkoutRequestId, onStatusChange) => {
+    const [status, setStatus] = useState(null);
+    const intervalRef = useRef(null);
+    const callbackRef = useRef(onStatusChange);
+    callbackRef.current = onStatusChange;
+
+    useEffect(() => {
+        if (!checkoutRequestId) return;
+
+        const poll = async () => {
+            try {
+                const result = await getTransactionStatus(checkoutRequestId);
+                setStatus(result.status);
+                if (result.status === 'completed' || result.status === 'failed' || result.status === 'cancelled') {
+                    clearInterval(intervalRef.current);
+                    if (callbackRef.current) callbackRef.current(result);
+                }
+            } catch {
+                // keep polling on transient errors
+            }
+        };
+
+        poll();
+        intervalRef.current = setInterval(poll, 5000);
+
+        return () => clearInterval(intervalRef.current);
+    }, [checkoutRequestId]);
+
+    return { status };
 };
 
 // ============ DEFAULT EXPORT ============
