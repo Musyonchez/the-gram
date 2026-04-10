@@ -10,7 +10,7 @@ const DonateModal = ({ post, onClose, onSuccess }) => {
   const [message, setMessage] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [donationId, setDonationId] = useState(null);
+  const [_donationId, setDonationId] = useState(null);
   const [checkoutRequestId, setCheckoutRequestId] = useState(null);
   const [step, setStep] = useState('form'); // 'form', 'processing', 'success', 'error'
   const [errorMessage, setErrorMessage] = useState('');
@@ -19,7 +19,7 @@ const DonateModal = ({ post, onClose, onSuccess }) => {
   const suggestedAmounts = [50, 100, 200, 500, 1000];
   
   // Monitor transaction status
-  const { status: transactionStatus } = useTransactionStatus(checkoutRequestId, (result) => {
+  useTransactionStatus(checkoutRequestId, (result) => {
     if (result.status === 'completed') {
       setStep('success');
       toast.success('Donation completed successfully! Thank you for your support!');

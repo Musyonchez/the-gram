@@ -104,10 +104,8 @@ const CreatePostPage = () => {
       if (postData.carousel_images.length < 2) {
         newErrors.carousel_images = 'Carousel posts require at least 2 images';
       }
-    } else {
-      if (!postData.media_file) {
-        newErrors.media_file = `Please select a ${postData.post_type} file`;
-      }
+    } else if (!postData.media_file) {
+      newErrors.media_file = `Please select a ${postData.post_type} file`;
     }
     
     setErrors(newErrors);
@@ -144,10 +142,8 @@ const CreatePostPage = () => {
         postData.carousel_images.forEach((image) => {
           formData.append('carousel_images', image);
         });
-      } else {
-        if (postData.media_file) {
-          formData.append('media_file', postData.media_file);
-        }
+      } else if (postData.media_file) {
+        formData.append('media_file', postData.media_file);
       }
       
       const result = await createPost(formData);
@@ -402,7 +398,7 @@ const CreatePostPage = () => {
           
           {/* Location (Optional) */}
           <div className="mb-6">
-            <label className="block text-white text-sm font-semibold mb-2 flex items-center gap-2">
+            <label className="flex items-center gap-2 text-white text-sm font-semibold mb-2">
               <FiMapPin /> Location (Optional)
             </label>
             <div className="grid grid-cols-2 gap-3">

@@ -60,7 +60,7 @@ const DonationsPage = () => {
     <div className="max-w-3xl mx-auto px-6 py-8">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-white mb-2">Donations</h2>
-        <div className="bg-gradient-to-r from-green-600 to-emerald-500 rounded-2xl p-6">
+        <div className="bg-linear-to-r from-green-600 to-emerald-500 rounded-2xl p-6">
           <p className="text-white/80 text-sm mb-2">Total Donations Received</p>
           <p className="text-4xl font-bold text-white flex items-center gap-2">
             <FiDollarSign className="text-3xl" />
