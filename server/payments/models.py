@@ -10,7 +10,7 @@ class Donation(models.Model):
     """
     Model to handle M-Pesa STK Push donations
     """
-    
+
     # Payment Status Choices
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -20,21 +20,21 @@ class Donation(models.Model):
         ('cancelled', 'Cancelled'),
         ('refunded', 'Refunded'),
     ]
-    
+
     # Payment Channel Choices
     CHANNEL_CHOICES = [
         ('mpesa', 'M-Pesa'),
         ('card', 'Credit/Debit Card'),
         ('paypal', 'PayPal'),
     ]
-    
+
     # Donation Type Choices
     DONATION_TYPE_CHOICES = [
         ('post', 'Post Donation'),
         ('creator', 'Creator Donation'),
         ('event', 'Event Donation'),
     ]
-    
+
     # Basic Information
     donor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -58,7 +58,7 @@ class Donation(models.Model):
         related_name='donations',
         verbose_name='Post'
     )
-    
+
     # Donation Details
     donation_type = models.CharField(
         max_length=20,
@@ -88,7 +88,7 @@ class Donation(models.Model):
         default=False,
         verbose_name='Donate Anonymously'
     )
-    
+
     # M-Pesa Specific Fields
     phone_number = models.CharField(
         max_length=15,
@@ -135,7 +135,7 @@ class Donation(models.Model):
         null=True,
         verbose_name='Result Description'
     )
-    
+
     # Payment Status
     status = models.CharField(
         max_length=20,
@@ -150,7 +150,7 @@ class Donation(models.Model):
         default='mpesa',
         verbose_name='Payment Channel'
     )
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name='Created At')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated At')
@@ -159,7 +159,7 @@ class Donation(models.Model):
         blank=True,
         verbose_name='Completed At'
     )
-    
+
     # Metadata
     metadata = models.JSONField(
         default=dict,
@@ -176,7 +176,7 @@ class Donation(models.Model):
         null=True,
         verbose_name='User Agent'
     )
-    
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -190,30 +190,30 @@ class Donation(models.Model):
         ]
         verbose_name = 'Donation'
         verbose_name_plural = 'Donations'
-    
+
     def __str__(self):
         donor_name = self.donor.username if self.donor else 'Anonymous'
         return f"{donor_name} donated {self.amount} {self.currency} to {self.recipient.username}"
-    
+
     @property
     def is_completed(self):
         return self.status == 'completed'
-    
+
     @property
     def is_pending(self):
         return self.status == 'pending'
-    
+
     @property
     def is_failed(self):
         return self.status == 'failed'
-    
+
     @property
     def display_name(self):
         """Return donor name or 'Anonymous' for public display"""
         if self.is_anonymous:
             return 'Anonymous'
         return self.donor.full_name or self.donor.username if self.donor else 'Anonymous'
-    
+
     def mark_completed(self, receipt_number=None, transaction_id=None):
         """Mark donation as completed"""
         self.status = 'completed'
@@ -223,19 +223,19 @@ class Donation(models.Model):
         if transaction_id:
             self.transaction_id = transaction_id
         self.save(update_fields=['status', 'completed_at', 'mpesa_receipt_number', 'transaction_id'])
-    
+
     def mark_failed(self, result_code, result_description):
         """Mark donation as failed"""
         self.status = 'failed'
         self.result_code = result_code
         self.result_description = result_description
         self.save(update_fields=['status', 'result_code', 'result_description'])
-    
+
     def mark_processing(self):
         """Mark donation as processing"""
         self.status = 'processing'
         self.save(update_fields=['status'])
-    
+
     def save(self, *args, **kwargs):
         # Ensure phone number is in correct format
         if self.phone_number:
@@ -253,14 +253,14 @@ class MpesaTransaction(models.Model):
     """
     Model to store raw M-Pesa API responses and callbacks
     """
-    
+
     TRANSACTION_TYPE_CHOICES = [
         ('stk_push', 'STK Push'),
         ('stk_push_query', 'STK Push Query'),
         ('b2c', 'B2C'),
         ('c2b', 'C2B'),
     ]
-    
+
     donation = models.ForeignKey(
         Donation,
         on_delete=models.CASCADE,
@@ -308,7 +308,7 @@ class MpesaTransaction(models.Model):
         verbose_name='Result Description'
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
-    
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -318,7 +318,7 @@ class MpesaTransaction(models.Model):
         ]
         verbose_name = 'M-Pesa Transaction'
         verbose_name_plural = 'M-Pesa Transactions'
-    
+
     def __str__(self):
         return f"{self.transaction_type} - {self.checkout_request_id}"
 
@@ -327,7 +327,7 @@ class DonationStats(models.Model):
     """
     Model to track aggregated donation statistics for users and posts
     """
-    
+
     PERIOD_CHOICES = [
         ('day', 'Daily'),
         ('week', 'Weekly'),
@@ -335,7 +335,7 @@ class DonationStats(models.Model):
         ('year', 'Yearly'),
         ('all', 'All Time'),
     ]
-    
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -359,7 +359,7 @@ class DonationStats(models.Model):
     date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = [['user', 'period', 'date'], ['post', 'period', 'date']]
         indexes = [
@@ -369,21 +369,19 @@ class DonationStats(models.Model):
         ]
         verbose_name = 'Donation Stats'
         verbose_name_plural = 'Donation Stats'
-    
+
     def __str__(self):
         if self.user:
             return f"{self.user.username} - {self.period} - {self.date}"
         return f"Post {self.post.id} - {self.period} - {self.date}"
-    
+
     @classmethod
     def update_stats(cls, donation):
         """Update donation statistics when a donation is completed"""
-        from django.db.models import Sum, Count
-        
         # Update for recipient user
         if donation.recipient:
             date = donation.completed_at.date()
-            
+
             # Update daily stats
             daily_stats, _ = cls.objects.get_or_create(
                 user=donation.recipient,
@@ -391,7 +389,7 @@ class DonationStats(models.Model):
                 date=date,
                 defaults={'total_amount': 0, 'total_donations': 0, 'unique_donors': 0}
             )
-            
+
             # Update weekly stats
             week_start = date - timedelta(days=date.weekday())
             weekly_stats, _ = cls.objects.get_or_create(
@@ -400,7 +398,7 @@ class DonationStats(models.Model):
                 date=week_start,
                 defaults={'total_amount': 0, 'total_donations': 0, 'unique_donors': 0}
             )
-            
+
             # Update monthly stats
             month_start = date.replace(day=1)
             monthly_stats, _ = cls.objects.get_or_create(
@@ -409,7 +407,7 @@ class DonationStats(models.Model):
                 date=month_start,
                 defaults={'total_amount': 0, 'total_donations': 0, 'unique_donors': 0}
             )
-            
+
             # Update all-time stats
             all_stats, _ = cls.objects.get_or_create(
                 user=donation.recipient,
@@ -417,7 +415,7 @@ class DonationStats(models.Model):
                 date=date.min,
                 defaults={'total_amount': 0, 'total_donations': 0, 'unique_donors': 0}
             )
-            
+
             for stats in [daily_stats, weekly_stats, monthly_stats, all_stats]:
                 stats.total_amount += donation.amount
                 stats.total_donations += 1
@@ -429,7 +427,7 @@ class DonationStats(models.Model):
                 ).values('donor').distinct().count()
                 stats.last_donation_at = donation.completed_at
                 stats.save()
-        
+
         # Update for post
         if donation.post:
             date = donation.completed_at.date()

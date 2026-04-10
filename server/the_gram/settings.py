@@ -21,17 +21,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     # Third party apps
     'corsheaders',  # Add this - make sure it's before rest_framework
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'django_behave',
-    
+
     # Local apps
-    'oauth',  
-    'posts',  
+    'oauth',
+    'posts',
     'payments',
 ]
 
@@ -176,16 +176,16 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
-    
+
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'VERIFYING_KEY': None,
-    
+
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
-    
+
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
@@ -194,8 +194,8 @@ SIMPLE_JWT = {
 DATE_INPUT_FORMATS = ['%Y-%m-%d']
 
 # File upload settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760 
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760 
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760
 
 # Security settings for development
 if DEBUG:
@@ -206,7 +206,8 @@ if DEBUG:
 
 # M-Pesa Daraja API Settings
 MPESA_CONSUMER_KEY = os.environ.get('MPESA_CONSUMER_KEY', 'e77uAF2B2ESVlrYCYmgoZi7JW5mDZpgxnZeltisinzlxDcYl')
-MPESA_CONSUMER_SECRET = os.environ.get('MPESA_CONSUMER_SECRET', 'm0y87ECFPTiAQeYmMCftGw1AbOi5tOCfZJ7IoqhDwPvJDfG7Cv30iLOFgRoGAYmE')
+MPESA_CONSUMER_SECRET = os.environ.get(
+    'MPESA_CONSUMER_SECRET', 'm0y87ECFPTiAQeYmMCftGw1AbOi5tOCfZJ7IoqhDwPvJDfG7Cv30iLOFgRoGAYmE')
 MPESA_PASSKEY = os.environ.get('MPESA_PASSKEY', 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919')
 MPESA_SHORTCODE = os.environ.get('MPESA_SHORTCODE', '174379')  # Test shortcode
 MPESA_CALLBACK_URL = os.environ.get('MPESA_CALLBACK_URL', 'https://webhook.site/3ae09dfb-f73d-4db8-8371-866a17169d70')

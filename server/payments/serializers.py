@@ -11,7 +11,7 @@ class DonationSerializer(serializers.ModelSerializer):
     post_info = PostSerializer(source='post', read_only=True)
     formatted_amount = serializers.SerializerMethodField()
     formatted_date = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Donation
         fields = [
@@ -21,13 +21,13 @@ class DonationSerializer(serializers.ModelSerializer):
             'created_at', 'formatted_date', 'completed_at'
         ]
         read_only_fields = ['id', 'status', 'created_at', 'completed_at']
-    
+
     def get_formatted_amount(self, obj):
         return f"{obj.currency} {obj.amount:,.2f}"
-    
+
     def get_formatted_date(self, obj):
         return obj.created_at.strftime("%B %d, %Y at %I:%M %p")
-    
+
     def validate_amount(self, value):
         if value < 1:
             raise serializers.ValidationError("Minimum donation amount is 1 KES")
@@ -43,11 +43,11 @@ class MpesaSTKPushSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=15)
     message = serializers.CharField(max_length=500, required=False, allow_blank=True)
     is_anonymous = serializers.BooleanField(default=False)
-    
+
     def validate(self, data):
         if not data.get('post_id') and not data.get('recipient_id'):
             raise serializers.ValidationError("Either post_id or recipient_id is required")
-        
+
         # Validate phone number format
         phone = data.get('phone_number')
         # Remove any non-digit characters
@@ -60,10 +60,10 @@ class MpesaSTKPushSerializer(serializers.Serializer):
             else:
                 phone = '254' + phone
         data['phone_number'] = phone
-        
+
         if len(phone) != 12:
             raise serializers.ValidationError("Invalid phone number format. Use 254XXXXXXXXX")
-        
+
         return data
 
 
