@@ -1,29 +1,36 @@
 import React, { useState } from 'react';
+import { register, login, checkUsername, checkEmail, validateRegistration } from '../services/auth';
 
 // --- Reusable Sub-Components ---
 
 // 1. Primary Button (Solid Orange)
-const PrimaryButton = ({ label, onClick, type = "button" }) => (
+const PrimaryButton = ({ label, onClick, type = "button", disabled = false }) => (
   <button 
     type={type}
     onClick={onClick}
-    className="w-full bg-[#ff7b57] hover:bg-[#e96e4c] text-black font-bold py-3.5 px-4 rounded-full text-sm transition-colors duration-200"
+    disabled={disabled}
+    className={`w-full bg-[#ff7b57] hover:bg-[#e96e4c] text-black font-bold py-3.5 px-4 rounded-full text-sm transition-colors duration-200 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
   >
     {label}
   </button>
 );
 
-// 2. Input Field
-const InputField = ({ label, type = "text", placeholder }) => (
+// 2. Input Field with error handling
+const InputField = ({ label, type = "text", placeholder, name, value, onChange, onBlur, error, required = false }) => (
   <div className="w-full mb-5">
     <label className="block text-white text-xs font-semibold mb-2 ml-1">
-      {label}
+      {label} {required && <span className="text-[#ff7b57]">*</span>}
     </label>
     <input 
       type={type} 
+      name={name}
       placeholder={placeholder}
-      className="w-full bg-black/40 text-white placeholder:text-zinc-600 border border-zinc-800 focus:border-[#ff7b57] focus:ring-1 focus:ring-[#ff7b57] rounded-full py-3 px-6 text-sm outline-none transition"
+      value={value}
+      onChange={onChange}
+      onBlur={onBlur}
+      className={`w-full bg-black/40 text-white placeholder:text-zinc-600 border ${error ? 'border-red-500' : 'border-zinc-800'} focus:border-[#ff7b57] focus:ring-1 focus:ring-[#ff7b57] rounded-full py-3 px-6 text-sm outline-none transition`}
     />
+    {error && <p className="text-red-500 text-xs mt-1 ml-4">{error}</p>}
   </div>
 );
 
@@ -52,39 +59,410 @@ const AuthHeader = ({ title, subtitle }) => (
 // 5. Section Divider ("OR")
 const Divider = () => (
   <div className="relative flex items-center w-full my-8">
-    <div className="flex-grow border-t border-zinc-800"></div>
-    <span className="flex-shrink mx-4 text-xs font-bold text-zinc-500">OR</span>
-    <div className="flex-grow border-t border-zinc-800"></div>
+    <div className="grow border-t border-zinc-800"></div>
+    <span className="shrink mx-4 text-xs font-bold text-zinc-500">OR</span>
+    <div className="grow border-t border-zinc-800"></div>
   </div>
 );
 
-// --- MAIN COMPONENT ---
-
-const AuthPage = () => {
-  // 💡 State to track whether to show Log in (true) or Sign up (false)
-  const [showLogin, setShowLogin] = useState(true);
+// 6. Country Select Dropdown
+const CountrySelect = ({ label, name, value, onChange, error, required = false }) => {
+  const africaCountries = [
+    { code: 'DZ', name: 'Algeria' }, { code: 'AO', name: 'Angola' }, { code: 'BJ', name: 'Benin' },
+    { code: 'BW', name: 'Botswana' }, { code: 'BF', name: 'Burkina Faso' }, { code: 'BI', name: 'Burundi' },
+    { code: 'CV', name: 'Cabo Verde' }, { code: 'CM', name: 'Cameroon' }, { code: 'CF', name: 'Central African Republic' },
+    { code: 'TD', name: 'Chad' }, { code: 'KM', name: 'Comoros' }, { code: 'CD', name: 'Congo' },
+    { code: 'DJ', name: 'Djibouti' }, { code: 'EG', name: 'Egypt' }, { code: 'GQ', name: 'Equatorial Guinea' },
+    { code: 'ER', name: 'Eritrea' }, { code: 'SZ', name: 'Eswatini' }, { code: 'ET', name: 'Ethiopia' },
+    { code: 'GA', name: 'Gabon' }, { code: 'GM', name: 'Gambia' }, { code: 'GH', name: 'Ghana' },
+    { code: 'GN', name: 'Guinea' }, { code: 'GW', name: 'Guinea-Bissau' }, { code: 'CI', name: 'Côte d\'Ivoire' },
+    { code: 'KE', name: 'Kenya' }, { code: 'LS', name: 'Lesotho' }, { code: 'LR', name: 'Liberia' },
+    { code: 'LY', name: 'Libya' }, { code: 'MG', name: 'Madagascar' }, { code: 'MW', name: 'Malawi' },
+    { code: 'ML', name: 'Mali' }, { code: 'MR', name: 'Mauritania' }, { code: 'MU', name: 'Mauritius' },
+    { code: 'MA', name: 'Morocco' }, { code: 'MZ', name: 'Mozambique' }, { code: 'NA', name: 'Namibia' },
+    { code: 'NE', name: 'Niger' }, { code: 'NG', name: 'Nigeria' }, { code: 'RW', name: 'Rwanda' },
+    { code: 'ST', name: 'Sao Tome and Principe' }, { code: 'SN', name: 'Senegal' }, { code: 'SC', name: 'Seychelles' },
+    { code: 'SL', name: 'Sierra Leone' }, { code: 'SO', name: 'Somalia' }, { code: 'ZA', name: 'South Africa' },
+    { code: 'SS', name: 'South Sudan' }, { code: 'SD', name: 'Sudan' }, { code: 'TZ', name: 'Tanzania' },
+    { code: 'TG', name: 'Togo' }, { code: 'TN', name: 'Tunisia' }, { code: 'UG', name: 'Uganda' },
+    { code: 'ZM', name: 'Zambia' }, { code: 'ZW', name: 'Zimbabwe' }
+  ];
 
   return (
-    // Main Container (Dark Background)
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-sans p-6">
+    <div className="w-full mb-5">
+      <label className="block text-white text-xs font-semibold mb-2 ml-1">
+        {label} {required && <span className="text-[#ff7b57]">*</span>}
+      </label>
+      <select
+        name={name}
+        value={value}
+        onChange={onChange}
+        className={`w-full bg-black/40 text-white placeholder:text-zinc-600 border ${error ? 'border-red-500' : 'border-zinc-800'} focus:border-[#ff7b57] focus:ring-1 focus:ring-[#ff7b57] rounded-full py-3 px-6 text-sm outline-none transition`}
+      >
+        <option value="">Select Country</option>
+        {africaCountries.map(country => (
+          <option key={country.code} value={country.code}>
+            {country.name}
+          </option>
+        ))}
+      </select>
+      {error && <p className="text-red-500 text-xs mt-1 ml-4">{error}</p>}
+    </div>
+  );
+};
+
+// --- LOGIN FORM COMPONENT ---
+const LoginForm = ({ onSuccess }) => {
+  const [formData, setFormData] = useState({
+    identifier: '',
+    password: '',
+  });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [generalError, setGeneralError] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+    setGeneralError('');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.identifier || !formData.password) {
+      setErrors({
+        identifier: !formData.identifier ? 'Email/Username/Phone is required' : '',
+        password: !formData.password ? 'Password is required' : '',
+      });
+      return;
+    }
+
+    setLoading(true);
+    setGeneralError('');
+
+    try {
+      // Determine what type of identifier was provided
+      const credentials = {};
+      if (formData.identifier.includes('@')) {
+        credentials.email = formData.identifier;
+      } else if (formData.identifier.match(/^\+?[0-9]+$/)) {
+        credentials.phone_number = formData.identifier;
+      } else {
+        credentials.username = formData.identifier;
+      }
+      credentials.password = formData.password;
+
+      const result = await login(credentials);
+      console.log('Login successful:', result);
       
+      if (onSuccess) {
+        onSuccess(result.user);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      if (error.data?.errors) {
+        setErrors(error.data.errors);
+      } else if (error.data?.non_field_errors) {
+        setGeneralError(error.data.non_field_errors[0]);
+      } else {
+        setGeneralError(error.message || 'Login failed. Please check your credentials.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {generalError && (
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500 rounded-lg">
+          <p className="text-red-500 text-sm text-center">{generalError}</p>
+        </div>
+      )}
+      
+      <InputField 
+        label="Email, Username or Phone Number" 
+        type="text" 
+        placeholder="Enter your email, username or phone number"
+        name="identifier"
+        value={formData.identifier}
+        onChange={handleChange}
+        error={errors.identifier}
+        required
+      />
+      
+      <InputField 
+        label="Password" 
+        type="password" 
+        placeholder="Enter your password"
+        name="password"
+        value={formData.password}
+        onChange={handleChange}
+        error={errors.password}
+        required
+      />
+
+      <div className="text-left mb-6">
+        <a href="#" className="text-xs text-zinc-400 hover:text-zinc-200 font-semibold underline">
+          Forgot your password?
+        </a>
+      </div>
+
+      <PrimaryButton label={loading ? "Logging in..." : "Log in"} type="submit" disabled={loading} />
+    </form>
+  );
+};
+
+// --- SIGNUP FORM COMPONENT ---
+const SignupForm = ({ onSuccess }) => {
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirm_password: '',
+    full_name: '',
+    date_of_birth: '',
+    phone_number: '',
+    country: '',
+    city: '',
+  });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [generalError, setGeneralError] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+    setGeneralError('');
+  };
+
+  const handleBlur = async (e) => {
+    const { name, value } = e.target;
+    
+    if (name === 'username' && value && value.length >= 3) {
+      try {
+        const result = await checkUsername(value);
+        if (!result.available) {
+          setErrors(prev => ({ ...prev, username: 'Username is already taken' }));
+        }
+      } catch (error) {
+        console.error('Username check error:', error);
+      }
+    }
+    
+    if (name === 'email' && value && value.includes('@')) {
+      try {
+        const result = await checkEmail(value);
+        if (!result.available) {
+          setErrors(prev => ({ ...prev, email: 'Email is already registered' }));
+        }
+      } catch (error) {
+        console.error('Email check error:', error);
+      }
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    const validation = validateRegistration(formData);
+    if (!validation.isValid) {
+      setErrors(validation.errors);
+      return;
+    }
+    
+    setLoading(true);
+    setGeneralError('');
+
+    try {
+      const result = await register(formData);
+      console.log('Registration successful:', result);
+      
+      if (onSuccess) {
+        onSuccess(result.user);
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      if (error.data?.errors) {
+        setErrors(error.data.errors);
+      } else if (error.data?.non_field_errors) {
+        setGeneralError(error.data.non_field_errors[0]);
+      } else {
+        setGeneralError(error.message || 'Registration failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {generalError && (
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500 rounded-lg">
+          <p className="text-red-500 text-sm text-center">{generalError}</p>
+        </div>
+      )}
+      
+      <InputField 
+        label="Username" 
+        type="text" 
+        placeholder="Choose a username"
+        name="username"
+        value={formData.username}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        error={errors.username}
+        required
+      />
+      
+      <InputField 
+        label="Email" 
+        type="email" 
+        placeholder="Enter your email"
+        name="email"
+        value={formData.email}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        error={errors.email}
+        required
+      />
+      
+      <InputField 
+        label="Full Name" 
+        type="text" 
+        placeholder="Your full name"
+        name="full_name"
+        value={formData.full_name}
+        onChange={handleChange}
+        error={errors.full_name}
+        required
+      />
+      
+      <InputField 
+        label="Date of Birth" 
+        type="date" 
+        placeholder="YYYY-MM-DD"
+        name="date_of_birth"
+        value={formData.date_of_birth}
+        onChange={handleChange}
+        error={errors.date_of_birth}
+        required
+      />
+      
+      <InputField 
+        label="Phone Number" 
+        type="tel" 
+        placeholder="+254712345678"
+        name="phone_number"
+        value={formData.phone_number}
+        onChange={handleChange}
+        error={errors.phone_number}
+        required
+      />
+      
+      <CountrySelect 
+        label="Country"
+        name="country"
+        value={formData.country}
+        onChange={handleChange}
+        error={errors.country}
+        required
+      />
+      
+      <InputField 
+        label="City" 
+        type="text" 
+        placeholder="Your city"
+        name="city"
+        value={formData.city}
+        onChange={handleChange}
+        error={errors.city}
+        required
+      />
+      
+      <InputField 
+        label="Password" 
+        type="password" 
+        placeholder="Create a password (min. 8 characters)"
+        name="password"
+        value={formData.password}
+        onChange={handleChange}
+        error={errors.password}
+        required
+      />
+      
+      <InputField 
+        label="Confirm Password" 
+        type="password" 
+        placeholder="Confirm your password"
+        name="confirm_password"
+        value={formData.confirm_password}
+        onChange={handleChange}
+        error={errors.confirm_password}
+        required
+      />
+
+      <PrimaryButton label={loading ? "Creating Account..." : "Create account"} type="submit" disabled={loading} />
+    </form>
+  );
+};
+
+// --- MAIN AUTH PAGE COMPONENT ---
+const AuthPage = () => {
+  const [showLogin, setShowLogin] = useState(true);
+  const [authSuccess, setAuthSuccess] = useState(false);
+
+  const handleAuthSuccess = (user) => {
+    setAuthSuccess(true);
+    // Redirect to dashboard after successful authentication
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 1500);
+  };
+
+  if (authSuccess) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-sans p-6">
+        <div className="relative z-10 w-full max-w-md bg-[#131313] rounded-3xl p-12 border border-zinc-900 shadow-2xl text-center">
+          <div className="bg-green-500/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Success!</h2>
+          <p className="text-zinc-400">
+            {showLogin ? 'Login successful! Redirecting...' : 'Account created successfully! Redirecting...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-sans p-6">
       {/* Background Images (Placeholder / Position Only) */}
       <div className="absolute inset-0 opacity-10 flex gap-10 overflow-hidden scale-110">
-          <img src="https://picsum.photos/400/600" className="object-cover" alt="" />
-          <img src="https://picsum.photos/400/500" className="object-cover" alt="" />
-          <img src="https://picsum.photos/400/800" className="object-cover" alt="" />
+        <img src="https://picsum.photos/400/600" className="object-cover" alt="" />
+        <img src="https://picsum.photos/400/500" className="object-cover" alt="" />
+        <img src="https://picsum.photos/400/800" className="object-cover" alt="" />
       </div>
 
       {/* Central Auth Container */}
-      <div className="relative z-10 w-full max-w-md bg-[#131313] rounded-3xl p-12 border border-zinc-900 shadow-2xl">
+      <div className="relative z-10 w-full max-w-md bg-[#131313] rounded-3xl p-12 border border-zinc-900 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
         
-        {/* The Reusable Header */}
         <AuthHeader 
           title={`Welcome to Afriq`} 
           subtitle={`Discover African art, fashion, and culture.`} 
         />
 
-        {/* 💡 Tabs Container: This manages switching between the two states */}
+        {/* Tabs Container */}
         <div className="w-full bg-black/40 rounded-full flex p-1 mb-8 border border-zinc-800">
           <button 
             onClick={() => setShowLogin(true)}
@@ -100,24 +478,12 @@ const AuthPage = () => {
           </button>
         </div>
 
-        {/* --- DYNAMIC FORM AREA --- */}
-        <form onSubmit={(e) => e.preventDefault()}>
-          <InputField label="Email address" type="email" placeholder="Enter your email" />
-          <InputField label="Password" type="password" placeholder="Enter your password" />
-
-          {/* Conditional rendering for "Forgot Password?" */}
-          {showLogin && (
-            <div className="text-left mb-6">
-              <a href="#" className="text-xs text-zinc-400 hover:text-zinc-200 font-semibold underline">
-                Forgot your password?
-              </a>
-            </div>
-          )}
-
-          {/* DYNAMIC PRIMARY BUTTON (LOG IN vs CREATE ACCOUNT) */}
-          <PrimaryButton label={showLogin ? "Log in" : "Create account"} type="submit" />
-        </form>
-        {/* --- END DYNAMIC FORM AREA --- */}
+        {/* Dynamic Form Area */}
+        {showLogin ? (
+          <LoginForm onSuccess={handleAuthSuccess} />
+        ) : (
+          <SignupForm onSuccess={handleAuthSuccess} />
+        )}
 
         {/* Section Divider */}
         <Divider />
@@ -129,8 +495,25 @@ const AuthPage = () => {
         </div>
 
       </div>
+
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #1a1a1a;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #ff7b57;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #e96e4c;
+        }
+      `}</style>
     </div>
   );
-}
+};
 
 export default AuthPage;
