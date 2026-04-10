@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+// AuthPage.jsx - Updated with image upload support
+import React, { useState, useRef } from 'react';
 import { register, login, checkUsername, checkEmail, validateRegistration } from '../services/auth';
+import { FiCamera, FiUser, FiX, FiUpload } from 'react-icons/fi';
 
 // --- Reusable Sub-Components ---
 
@@ -111,6 +113,53 @@ const CountrySelect = ({ label, name, value, onChange, error, required = false }
   );
 };
 
+// 7. Image Upload Component
+const ImageUpload = ({ label, onImageSelect, previewUrl, onRemove, error }) => {
+  const inputRef = useRef(null);
+
+  return (
+    <div className="w-full mb-5">
+      <label className="block text-white text-xs font-semibold mb-2 ml-1">
+        {label}
+      </label>
+      {previewUrl ? (
+        <div className="relative">
+          <img 
+            src={previewUrl} 
+            alt={label}
+            className="w-full h-32 object-cover rounded-xl"
+          />
+          <button
+            type="button"
+            onClick={onRemove}
+            className="absolute top-2 right-2 bg-black/70 hover:bg-black rounded-full p-1 transition"
+          >
+            <FiX className="text-white" size={16} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="w-full bg-black/40 border border-dashed border-zinc-700 hover:border-[#ff7b57] rounded-xl py-6 flex flex-col items-center gap-2 transition"
+        >
+          <FiUpload className="text-zinc-400 text-2xl" />
+          <span className="text-zinc-400 text-sm">Click to upload {label.toLowerCase()}</span>
+          <span className="text-zinc-600 text-xs">Max 5MB</span>
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        onChange={onImageSelect}
+        className="hidden"
+      />
+      {error && <p className="text-red-500 text-xs mt-1 ml-4">{error}</p>}
+    </div>
+  );
+};
+
 // --- LOGIN FORM COMPONENT ---
 const LoginForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -145,7 +194,6 @@ const LoginForm = ({ onSuccess }) => {
     setGeneralError('');
 
     try {
-      // Determine what type of identifier was provided
       const credentials = {};
       if (formData.identifier.includes('@')) {
         credentials.email = formData.identifier;
@@ -217,7 +265,7 @@ const LoginForm = ({ onSuccess }) => {
   );
 };
 
-// --- SIGNUP FORM COMPONENT ---
+// --- SIGNUP FORM COMPONENT WITH IMAGE UPLOADS ---
 const SignupForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
     username: '',
@@ -230,6 +278,10 @@ const SignupForm = ({ onSuccess }) => {
     country: '',
     city: '',
   });
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [coverPhoto, setCoverPhoto] = useState(null);
+  const [profilePreview, setProfilePreview] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [generalError, setGeneralError] = useState('');
@@ -241,6 +293,54 @@ const SignupForm = ({ onSuccess }) => {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
     setGeneralError('');
+  };
+
+  const handleProfilePictureSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({ ...prev, profile_picture: 'Profile picture must be less than 5MB' }));
+        return;
+      }
+      setProfilePicture(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      if (errors.profile_picture) {
+        setErrors(prev => ({ ...prev, profile_picture: '' }));
+      }
+    }
+  };
+
+  const handleCoverPhotoSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setErrors(prev => ({ ...prev, cover_photo: 'Cover photo must be less than 10MB' }));
+        return;
+      }
+      setCoverPhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      if (errors.cover_photo) {
+        setErrors(prev => ({ ...prev, cover_photo: '' }));
+      }
+    }
+  };
+
+  const removeProfilePicture = () => {
+    setProfilePicture(null);
+    setProfilePreview(null);
+  };
+
+  const removeCoverPhoto = () => {
+    setCoverPhoto(null);
+    setCoverPreview(null);
   };
 
   const handleBlur = async (e) => {
@@ -282,7 +382,26 @@ const SignupForm = ({ onSuccess }) => {
     setGeneralError('');
 
     try {
-      const result = await register(formData);
+      // Create FormData for multipart upload
+      const formDataToSend = new FormData();
+      
+      // Add all text fields
+      Object.keys(formData).forEach(key => {
+        if (formData[key]) {
+          formDataToSend.append(key, formData[key]);
+        }
+      });
+      
+      // Add images if they exist
+      if (profilePicture) {
+        formDataToSend.append('profile_picture', profilePicture);
+      }
+      if (coverPhoto) {
+        formDataToSend.append('cover_photo', coverPhoto);
+      }
+      
+      // Use the register function (need to update it to handle FormData)
+      const result = await register(formDataToSend);
       console.log('Registration successful:', result);
       
       if (onSuccess) {
@@ -309,6 +428,25 @@ const SignupForm = ({ onSuccess }) => {
           <p className="text-red-500 text-sm text-center">{generalError}</p>
         </div>
       )}
+      
+      {/* Image Uploads Section */}
+      <div className="mb-6 p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800">
+        <h3 className="text-white text-sm font-semibold mb-3">Profile Images (Optional)</h3>
+        <ImageUpload 
+          label="Profile Picture"
+          onImageSelect={handleProfilePictureSelect}
+          previewUrl={profilePreview}
+          onRemove={removeProfilePicture}
+          error={errors.profile_picture}
+        />
+        <ImageUpload 
+          label="Cover Photo"
+          onImageSelect={handleCoverPhotoSelect}
+          previewUrl={coverPreview}
+          onRemove={removeCoverPhoto}
+          error={errors.cover_photo}
+        />
+      </div>
       
       <InputField 
         label="Username" 
@@ -421,7 +559,6 @@ const AuthPage = () => {
 
   const handleAuthSuccess = (user) => {
     setAuthSuccess(true);
-    // Redirect to dashboard after successful authentication
     setTimeout(() => {
       window.location.href = '/dashboard';
     }, 1500);
@@ -447,14 +584,12 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-sans p-6">
-      {/* Background Images (Placeholder / Position Only) */}
       <div className="absolute inset-0 opacity-10 flex gap-10 overflow-hidden scale-110">
         <img src="https://picsum.photos/400/600" className="object-cover" alt="" />
         <img src="https://picsum.photos/400/500" className="object-cover" alt="" />
         <img src="https://picsum.photos/400/800" className="object-cover" alt="" />
       </div>
 
-      {/* Central Auth Container */}
       <div className="relative z-10 w-full max-w-md bg-[#131313] rounded-3xl p-12 border border-zinc-900 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
         
         <AuthHeader 
@@ -462,7 +597,6 @@ const AuthPage = () => {
           subtitle={`Discover African art, fashion, and culture.`} 
         />
 
-        {/* Tabs Container */}
         <div className="w-full bg-black/40 rounded-full flex p-1 mb-8 border border-zinc-800">
           <button 
             onClick={() => setShowLogin(true)}
@@ -478,17 +612,14 @@ const AuthPage = () => {
           </button>
         </div>
 
-        {/* Dynamic Form Area */}
         {showLogin ? (
           <LoginForm onSuccess={handleAuthSuccess} />
         ) : (
           <SignupForm onSuccess={handleAuthSuccess} />
         )}
 
-        {/* Section Divider */}
         <Divider />
 
-        {/* Social Buttons Container */}
         <div className="w-full flex flex-col gap-4">
           <SocialButton label="Continue with Google" icon="G" onClick={() => {}} />
           <SocialButton label="Continue with Apple" icon="" onClick={() => {}} />

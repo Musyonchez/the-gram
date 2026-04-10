@@ -4,6 +4,8 @@ import { FiHeart, FiMessageCircle, FiDollarSign, FiBookmark, FiShare2, FiUserPlu
 import { toast } from 'react-toastify';
 import { getFeed, toggleLike, savePost, formatPostData } from '../../services/posts';
 import { getSuggestions, followUser } from '../../services/auth';
+import CommentsModal from '../../components/modals/CommentsModal';
+import DonateModal from '../../components/modals/DonateModal';
 
 const FeedPage = () => {
   const [posts, setPosts] = useState([]);
@@ -13,6 +15,14 @@ const FeedPage = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
   const [followingSuggestions, setFollowingSuggestions] = useState(new Set());
+  
+  // Comment modal state
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [showComments, setShowComments] = useState(false);
+  
+  // Donate modal state
+  const [donatePost, setDonatePost] = useState(null);
+  const [showDonate, setShowDonate] = useState(false);
 
   useEffect(() => {
     loadFeed();
@@ -58,8 +68,6 @@ const FeedPage = () => {
       await followUser(userId);
       setFollowingSuggestions(prev => new Set([...prev, userId]));
       toast.success('Started following!');
-      
-      // Remove from suggestions or mark as followed
       setSuggestions(prev => prev.filter(user => user.id !== userId));
     } catch (error) {
       console.error('Error following user:', error);
@@ -111,6 +119,43 @@ const FeedPage = () => {
       console.error('Error saving post:', error);
       toast.error('Failed to save post');
     }
+  };
+
+  const handleOpenComments = (post) => {
+    setSelectedPost(post);
+    setShowComments(true);
+  };
+
+  const handleOpenDonate = (post) => {
+    setDonatePost(post);
+    setShowDonate(true);
+  };
+
+  const handleCommentCountUpdate = (postId, newCount) => {
+    setPosts(prev => prev.map(post =>
+      post.id === postId
+        ? { ...post, stats: { ...post.stats, comments: newCount } }
+        : post
+    ));
+  };
+
+  const handleDonationSuccess = (result) => {
+    console.log('Donation successful:', result);
+    // Optionally update the post's donation stats in the feed
+    if (result.post_id) {
+      setPosts(prev => prev.map(post =>
+        post.id === result.post_id
+          ? { 
+              ...post, 
+              stats: { 
+                ...post.stats, 
+                donations: (post.stats.donations || 0) + 1 
+              }
+            }
+          : post
+      ));
+    }
+    toast.success('Thank you for your support! 🎉');
   };
 
   if (loading && page === 1) {
@@ -281,7 +326,10 @@ const FeedPage = () => {
                 <span className="text-sm">Like</span>
               </button>
               
-              <button className="flex items-center gap-2 text-zinc-400 hover:text-blue-500 transition-all duration-200 group">
+              <button 
+                onClick={() => handleOpenComments(post)}
+                className="flex items-center gap-2 text-zinc-400 hover:text-blue-500 transition-all duration-200 group"
+              >
                 <FiMessageCircle className="text-xl group-hover:scale-110 transition-transform" />
                 <span className="text-sm">Comment</span>
               </button>
@@ -296,7 +344,10 @@ const FeedPage = () => {
                 <span className="text-sm">Save</span>
               </button>
               
-              <button className="flex items-center gap-2 text-zinc-400 hover:text-green-500 transition-all duration-200 group">
+              <button 
+                onClick={() => handleOpenDonate(post)}
+                className="flex items-center gap-2 text-zinc-400 hover:text-green-500 transition-all duration-200 group"
+              >
                 <FiDollarSign className="text-xl group-hover:scale-110 transition-transform" />
                 <span className="text-sm">Donate</span>
               </button>
@@ -321,6 +372,31 @@ const FeedPage = () => {
             {loading ? 'Loading...' : 'Load More'}
           </button>
         </div>
+      )}
+
+      {/* Comments Modal */}
+      {showComments && selectedPost && (
+        <CommentsModal
+          postId={selectedPost.id}
+          post={selectedPost}
+          onClose={() => {
+            setShowComments(false);
+            setSelectedPost(null);
+          }}
+          onCommentCountUpdate={handleCommentCountUpdate}
+        />
+      )}
+
+      {/* Donate Modal */}
+      {showDonate && donatePost && (
+        <DonateModal
+          post={donatePost}
+          onClose={() => {
+            setShowDonate(false);
+            setDonatePost(null);
+          }}
+          onSuccess={handleDonationSuccess}
+        />
       )}
     </div>
   );

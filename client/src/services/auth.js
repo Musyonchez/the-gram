@@ -6,7 +6,6 @@ const handleResponse = async (response) => {
   const data = await response.json();
   
   if (!response.ok) {
-    // Throw error with message from server or default message
     const error = new Error(data.message || data.errors || data.error || 'API request failed');
     error.status = response.status;
     error.data = data;
@@ -97,12 +96,16 @@ export const apiRequest = async (endpoint, options = {}) => {
   const accessToken = getAccessToken();
   
   const headers = {
-    'Content-Type': 'application/json',
     ...options.headers,
   };
   
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+  
+  // Don't set Content-Type for FormData
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
   }
   
   const makeRequest = async () => {
@@ -135,14 +138,15 @@ export const apiRequest = async (endpoint, options = {}) => {
   return makeRequest();
 };
 
-// Register a new user
+// Register a new user (UPDATED to support both JSON and FormData)
 export const register = async (userData) => {
+  // Check if we're sending FormData (for image uploads)
+  const isFormData = userData instanceof FormData;
+  
   const response = await fetch(`${API_BASE_URL}/register/`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(userData),
+    headers: isFormData ? {} : { 'Content-Type': 'application/json' },
+    body: userData,
   });
   
   const data = await handleResponse(response);
@@ -211,11 +215,24 @@ export const getUserProfile = async (username) => {
   return handleResponse(response);
 };
 
-// Update user profile
+// Update user profile (supports FormData for images)
 export const updateProfile = async (profileData) => {
+  let body;
+  let headers = {};
+  
+  if (profileData instanceof FormData) {
+    // For image uploads
+    body = profileData;
+  } else {
+    // For regular JSON data
+    body = JSON.stringify(profileData);
+    headers['Content-Type'] = 'application/json';
+  }
+  
   const data = await apiRequest('/profile/', {
     method: 'PATCH',
-    body: JSON.stringify(profileData),
+    body: body,
+    headers: headers,
   });
   
   if (data.user) {
@@ -335,7 +352,7 @@ export const getSuggestions = async () => {
   return handleResponse(response);
 };
 
-// Helper function to format user data for forms
+// Helper functions
 export const formatUserData = (user) => {
   return {
     username: user.username,
@@ -349,7 +366,6 @@ export const formatUserData = (user) => {
   };
 };
 
-// Helper function to calculate age
 export const calculateAge = (birthDate) => {
   const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
@@ -362,7 +378,6 @@ export const calculateAge = (birthDate) => {
   return age;
 };
 
-// Helper function to validate registration form
 export const validateRegistration = (formData) => {
   const errors = {};
   
@@ -421,7 +436,6 @@ export const validateRegistration = (formData) => {
   };
 };
 
-// Axios interceptor setup (if using Axios)
 export const setupAxiosInterceptors = (axios) => {
   axios.interceptors.request.use(
     async (config) => {

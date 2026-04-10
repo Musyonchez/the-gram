@@ -6,8 +6,6 @@ import Navbar from '../components/Layout/Navbar';
 const HomePage = () => {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-4">
-      {/* Navigation Bar */}
-      <Navbar/>
 
       {/* Masonry Layout */}
       <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 w-full max-w-[1600px] mx-auto px-2">
