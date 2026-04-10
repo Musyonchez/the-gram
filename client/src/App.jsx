@@ -85,7 +85,7 @@ const PublicRoute = ({ children }) => {
     );
   }
 
-  return !isAuth ? children : <Navigate to="/dashboard" replace />;
+  return isAuth ? <Navigate to="/dashboard" replace /> : children;
 };
 
 function App() {

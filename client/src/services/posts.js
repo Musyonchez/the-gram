@@ -530,8 +530,7 @@ export class PostsAPI {
     
     async likePost(postId) {
         try {
-            const result = await toggleLike(postId);
-            return result;
+            return await toggleLike(postId);
         } catch (error) {
             console.error('Error toggling like:', error);
             throw error;
@@ -560,8 +559,7 @@ export class PostsAPI {
     
     async savePostToCollection(postId, collectionId = null) {
         try {
-            const result = await savePost(postId, collectionId);
-            return result;
+            return await savePost(postId, collectionId);
         } catch (error) {
             console.error('Error saving post:', error);
             throw error;
