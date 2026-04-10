@@ -342,7 +342,7 @@ const ProfilePage = () => {
       {/* Profile Header */}
       <div className="bg-[#131313] rounded-2xl border border-zinc-800 overflow-hidden mb-8">
         {/* Cover Photo */}
-        <div className="relative h-48 bg-gradient-to-r from-[#ff7b57] to-[#e96e4c]">
+        <div className="relative h-48 bg-linear-to-r from-[#ff7b57] to-[#e96e4c]">
           {(coverPreview || coverImageUrl) && !isEditing ? (
             <img 
               src={coverPreview || coverImageUrl} 
@@ -350,7 +350,7 @@ const ProfilePage = () => {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-r from-[#ff7b57]/20 to-purple-500/20 flex items-center justify-center">
+            <div className="w-full h-full bg-linear-to-r from-[#ff7b57]/20 to-purple-500/20 flex items-center justify-center">
               <FiCamera className="text-4xl text-zinc-500" />
             </div>
           )}
@@ -385,7 +385,7 @@ const ProfilePage = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[#ff7b57] to-purple-600 flex items-center justify-center text-4xl font-bold text-white">
+                <div className="w-full h-full bg-linear-to-br from-[#ff7b57] to-purple-600 flex items-center justify-center text-4xl font-bold text-white">
                   {profile.full_name?.charAt(0) || profile.username?.charAt(0)}
                 </div>
               )}
