@@ -1,3 +1,4 @@
+# oauth/serializers.py
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -41,12 +42,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         style={'input_type': 'password'}
     )
     country = CountryField()
+    profile_picture = serializers.ImageField(required=False, allow_null=True)
+    cover_photo = serializers.ImageField(required=False, allow_null=True)
     
     class Meta:
         model = User
         fields = [
             'username', 'email', 'password', 'confirm_password',
-            'full_name', 'date_of_birth', 'phone_number', 'country', 'city'
+            'full_name', 'date_of_birth', 'phone_number', 'country', 'city',
+            'profile_picture', 'cover_photo'
         ]
     
     def validate_username(self, value):
@@ -142,6 +146,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop('confirm_password')
         password = validated_data.pop('password')
         
+        # Extract image fields
+        profile_picture = validated_data.pop('profile_picture', None)
+        cover_photo = validated_data.pop('cover_photo', None)
+        
         # Create user with all validated data
         user = User.objects.create_user(
             username=validated_data['username'],
@@ -153,6 +161,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             country=validated_data['country'],
             city=validated_data['city']
         )
+        
+        # Add images if provided
+        if profile_picture:
+            user.profile_picture = profile_picture
+        if cover_photo:
+            user.cover_photo = cover_photo
+        user.save()
         
         return user
 
@@ -207,7 +222,6 @@ class UserLoginSerializer(serializers.Serializer):
         
         return data
 
-# oauth/serializers.py - Complete fixed version
 class UserProfileSerializer(serializers.ModelSerializer):
     age = serializers.IntegerField(read_only=True)
     profile_picture_url = serializers.URLField(read_only=True)
@@ -265,9 +279,6 @@ class PasswordChangeSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError("Old password is incorrect")
         return value
-    
-
-# oauth/serializers.py - Add these new serializers at the end of the file
 
 class FollowSerializer(serializers.ModelSerializer):
     follower_username = serializers.CharField(source='follower.username', read_only=True)

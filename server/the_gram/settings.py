@@ -1,5 +1,6 @@
 from pathlib import Path
 from datetime import timedelta
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,6 +32,7 @@ INSTALLED_APPS = [
     # Local apps
     'oauth',  
     'posts',  
+    'payments',
 ]
 
 MIDDLEWARE = [
@@ -199,3 +201,13 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760
 if DEBUG:
     import ssl
     ssl._create_default_https_context = ssl._create_unverified_context
+
+# settings.py - Add these settings
+
+# M-Pesa Daraja API Settings
+MPESA_CONSUMER_KEY = os.environ.get('MPESA_CONSUMER_KEY', 'e77uAF2B2ESVlrYCYmgoZi7JW5mDZpgxnZeltisinzlxDcYl')
+MPESA_CONSUMER_SECRET = os.environ.get('MPESA_CONSUMER_SECRET', 'm0y87ECFPTiAQeYmMCftGw1AbOi5tOCfZJ7IoqhDwPvJDfG7Cv30iLOFgRoGAYmE')
+MPESA_PASSKEY = os.environ.get('MPESA_PASSKEY', 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919')
+MPESA_SHORTCODE = os.environ.get('MPESA_SHORTCODE', '174379')  # Test shortcode
+MPESA_CALLBACK_URL = os.environ.get('MPESA_CALLBACK_URL', 'https://webhook.site/3ae09dfb-f73d-4db8-8371-866a17169d70')
+MPESA_ENV = os.environ.get('MPESA_ENV', 'sandbox')  # 'sandbox' or 'production'

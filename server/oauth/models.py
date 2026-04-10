@@ -1,4 +1,4 @@
-# oauth/models.py
+# oauth/models.py - Fixed indentation
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
@@ -59,7 +59,7 @@ class User(AbstractUser):
     date_of_birth = models.DateField()
     bio = models.TextField(max_length=500, blank=True, default='')
     
-    # Profile Images
+    # Profile Images - Fixed indentation (these were the problem lines)
     profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     cover_photo = models.ImageField(upload_to='cover_photos/', null=True, blank=True)
     
@@ -159,7 +159,7 @@ class Follow(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        unique_together = ['follower', 'following']  # Prevent duplicate follows
+        unique_together = ['follower', 'following']
         indexes = [
             models.Index(fields=['follower', 'following']),
             models.Index(fields=['created_at']),

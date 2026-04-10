@@ -20,7 +20,13 @@ class RegistrationView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
     
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data, context={'request': request})
+        # Handle FormData with files
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # For file uploads, we need to handle the data differently
+            data = request.data.copy()
+            serializer = self.get_serializer(data=data, context={'request': request})
+        else:
+            serializer = self.get_serializer(data=request.data, context={'request': request})
         
         if serializer.is_valid():
             user = serializer.save()
